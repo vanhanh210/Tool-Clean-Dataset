@@ -162,7 +162,7 @@ def main():
                     df = st.session_state.cleaned_data[current_idx]
            
         # Download cleaned data as file
-        file_format = df.columns.name.split(".")[-1]
+        file_format = uploaded_file.name.split(".")[-1]
         data = df.to_csv(index=False)
         b64 = base64.b64encode(data.encode()).decode()
         href = f'<a href="data:file/{file_format};base64,{b64}" download="cleaned_data.{file_format}"><button>Download {file_format.upper()}</button></a>'
