@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
-
+import base64
 def remove_duplicates(df):
     return df.drop_duplicates()
 
@@ -160,7 +160,13 @@ def main():
                 if col3.button("Next Version"):
                     current_idx += 1
                     df = st.session_state.cleaned_data[current_idx]
-            
+           
+        # Download cleaned data as file
+        file_format = df.columns.name.split(".")[-1]
+        data = df.to_csv(index=False)
+        b64 = base64.b64encode(data.encode()).decode()
+        href = f'<a href="data:file/{file_format};base64,{b64}" download="cleaned_data.{file_format}"><button>Download {file_format.upper()}</button></a>'
+        st.markdown(href, unsafe_allow_html=True)
         # Clear history if user uploads a new file
         if uploaded_file != st.session_state.get('uploaded_file', None):
             st.session_state.uploaded_file = uploaded_file
