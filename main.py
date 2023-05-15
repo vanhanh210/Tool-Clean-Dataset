@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 import base64
+import openpyxl
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl import Workbook
 
