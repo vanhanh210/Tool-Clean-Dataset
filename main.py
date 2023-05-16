@@ -5,9 +5,87 @@ import base64
 import openpyxl
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl import Workbook
-
+import numpy as np
 def remove_duplicates(df):
     return df.drop_duplicates()
+
+def recommend_data_types(df):
+    """
+    Recommends data types for each column in a pandas DataFrame based on its unique values.
+
+    Parameters:
+        - df: pandas DataFrame
+
+    Returns:
+        - recommendations: dictionary with column names as keys and recommended data types as values
+    """
+    # Initialize recommendations
+    recommendations = {}
+
+    # Iterate over columns
+    for col in df.columns:
+        # Get unique values in column as strings
+        unique_vals = df[col].astype(str).unique()
+
+        # Check if column has any missing values
+        if pd.isnull(unique_vals).any():
+            recommendations[col] = "object"
+            continue
+
+        # Check for boolean columns
+        if len(unique_vals) == 2 and set(unique_vals) == {"False", "True"}:
+            recommendations[col] = "bool"
+            continue
+
+        # Check for datetime columns
+        try:
+            pd.to_datetime(unique_vals)
+            recommendations[col] = "datetime64[ns]"
+            continue
+        except ValueError:
+            pass
+
+        # Check for integer columns
+        if all([val.isdigit() or val.startswith("-") and val[1:].isdigit() for val in unique_vals]):
+            int_min = np.min([int(val) for val in unique_vals])
+            int_max = np.max([int(val) for val in unique_vals])
+            if -128 <= int_min and int_max <= 127:
+                recommendations[col] = "int8"
+            elif -32768 <= int_min and int_max <= 32767:
+                recommendations[col] = "int16"
+            elif -2147483648 <= int_min and int_max <= 2147483647:
+                recommendations[col] = "int32"
+            else:
+                recommendations[col] = "int64"
+            continue
+
+        # Check for floating point columns
+        if all([val.replace(".", "", 1).isdigit() or (val.startswith("-") and val[1:].replace(".", "", 1).isdigit()) for val in unique_vals]):
+            recommendations[col] = "float64"
+            continue
+
+        # Default to object column
+        recommendations[col] = "object"
+
+    return recommendations
+
+def apply_data_type_recommendations(df, recommendations):
+    """
+    Applies recommended data types to columns in a pandas DataFrame.
+
+    Parameters:
+        - df: pandas DataFrame
+        - recommendations: dictionary with column names as keys and recommended data types as values
+
+    Returns:
+        - df: pandas DataFrame with updated data types
+    """
+    # Iterate over recommended data types
+    for col, dtype in recommendations.items():
+        # Update data type of column
+        df[col] = df[col].astype(dtype)
+
+    return df
 
 def remove_outdated(df, date_col, time_filter):
     if time_filter:
@@ -117,9 +195,23 @@ def main():
             st.dataframe(df, height=500)
 
         # Sidebar options to inspect data and clean it
-        st.sidebar.title("Data Inspection Options")
+        with st.sidebar.expander("Recommend data types for columns"):
+            recommendations = recommend_data_types(df)
+            st.write("Recommended data types:", recommendations)
+            if st.button("Apply Recommendations"):
+                df = apply_data_type_recommendations(df, recommendations)
+                st.write("Changed data types of recommended columns.")
+                if show_cleaned:
+                    st.subheader("Cleaned Data")
+                    st.dataframe(df, height=500)
         with st.sidebar.expander("View column data types"):
-            st.write(df.dtypes)
+            col_to_dtype = {col: st.selectbox(col, ['int', 'float', 'object', 'bool', 'datetime64[ns]'], key=col) for col in df.columns}
+            if st.button("Change Data Types"):
+                df = df.astype(col_to_dtype)
+                st.write("Changed data types of selected columns.")
+                if show_cleaned:
+                    st.subheader("Cleaned Data")
+                    st.dataframe(df, height=500)       
         with st.sidebar.expander("Show unique values in column"):
             col = st.selectbox("Select column:", df.columns)
             unique_values = df[col].astype(str).unique()
