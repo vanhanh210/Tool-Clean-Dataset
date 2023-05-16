@@ -12,10 +12,8 @@ def remove_duplicates(df):
 def recommend_data_types(df):
     """
     Recommends data types for each column in a pandas DataFrame based on its unique values.
-
     Parameters:
         - df: pandas DataFrame
-
     Returns:
         - recommendations: dictionary with column names as keys and recommended data types as values
     """
@@ -72,11 +70,9 @@ def recommend_data_types(df):
 def apply_data_type_recommendations(df, recommendations):
     """
     Applies recommended data types to columns in a pandas DataFrame.
-
     Parameters:
         - df: pandas DataFrame
         - recommendations: dictionary with column names as keys and recommended data types as values
-
     Returns:
         - df: pandas DataFrame with updated data types
     """
@@ -125,6 +121,9 @@ def replace_text_in_column(df, col_name, old_text, new_text):
     return df
 
 def fill_missing_values(df):
+    # Make a copy of the DataFrame
+    df = df.copy()
+
     # Check if any missing values exist
     if df.isnull().sum().sum() == 0:
         st.write("No missing values found.")
@@ -170,39 +169,6 @@ def fill_missing_values(df):
         
     return df
 
-def export_to_excel(df, sheet_name, file_name):
-# Create a Pandas Excel writer using openpyxl as the engine
-    writer = pd.ExcelWriter(file_name, engine="openpyxl")
-# Try loading an existing workbook
-    try:
-        writer.book = openpyxl.load_workbook(file_name)
-
-        # Remove the sheet if it already exists
-        if sheet_name in writer.book.sheetnames:
-            idx = writer.book.sheetnames.index(sheet_name)
-            writer.book.remove(writer.book.worksheets[idx])
-
-        # Create a new sheet and append dataframe to it
-        df.to_excel(writer, sheet_name=sheet_name, index=False)
-
-        # Save the workbook
-        writer.save()
-
-    # If workbook loading or sheet removal fails, create a new workbook
-    except Exception as e:
-        print(e)
-        workbook = Workbook()
-
-        # Create a new sheet and append dataframe to it
-        df.to_excel(writer, sheet_name=sheet_name, index=False)
-
-        # Save the workbook
-        writer.save()
-        
-def add_data_summary_column(df):
-    df['data_summary'] = df.apply(lambda x: ', '.join([f"{col}: {x[col]}" for col in df.columns]), axis=1)
-    return df
-    
 def main():
     # Set Streamlit app title
     st.set_page_config(page_title="Dirty Data Cleaner", page_icon=":wrench:")
@@ -331,41 +297,6 @@ def main():
         if show_cleaned:
             st.subheader("Cleaned Data")
             st.dataframe(df, height=500)
-
-        # Save the cleaned dataframe in history
-        if 'cleaned_data' not in st.session_state:
-            st.session_state.cleaned_data = []
-            
-        current_time = datetime.now()
-        df = add_data_summary_column(df)
-        df['datetime'] = current_time
-        st.session_state.cleaned_data.append(df.copy())
-
-        if len(st.session_state.cleaned_data) > 1 and show_history:
-            # Display version edit history
-            st.subheader("Version History")
-            for i, version in enumerate(st.session_state.cleaned_data[:-1]):
-                version_num = i + 1
-                st.write(f"Version {version_num} - {version['datetime'].dt.strftime('%m/%d/%Y %I:%M %p').iloc[0]}")
-                st.write(version[['data_summary']])
-                # Download button for each version
-                file_format = uploaded_file.name.split(".")[-1]
-                if file_format == 'csv':
-                    data = version.to_csv(index=False)
-                else:
-                    wb = Workbook()
-                    ws = wb.active
-                    for r in dataframe_to_rows(version, index=False, header=True):
-                        ws.append(r)
-                    data = openpyxl.writer.excel.save_virtual_workbook(wb)
-
-                b64 = base64.b64encode(data).decode()
-                href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="cleaned_data_v{version_num}.{file_format}"><button>Download Version {version_num}</button></a>'
-                st.markdown(href, unsafe_allow_html=True)
-                
-                st.write("")
-
-            st.write(f"Current Version - {current_time.strftime('%m/%d/%Y %I:%M %p')}")
             # Download cleaned data as file
             file_format = uploaded_file.name.split(".")[-1]
 
@@ -386,4 +317,4 @@ def main():
                 st.session_state.uploaded_file = uploaded_file
                 st.session_state.cleaned_data = []
 if __name__ == "__main__":
-    main()        
+    main()
