@@ -142,37 +142,63 @@ def fill_missing_values(df):
     # Recommend fill method based on column data types
     if len(non_numeric_cols) == 0:
         fill_method = "Fill with Mean"
-        st.write("All columns are numeric. Filling missing values using mean of column.")
+        st.write("All columns are numeric. Filling missing values using the mean of the column.")
     else:
         if len(numeric_cols) == 0:
             fill_method = "Fill with Mode"
-            st.write("All columns are non-numeric. Filling missing values using mode of column.")
+            st.write("All columns are non-numeric. Filling missing values using the mode of the column.")
         else:
-            fill_method = "Interpolate"
-            st.write("Mixture of numeric and non-numeric columns. Filling missing values using interpolation.")
-    
+            # Let the user choose the fill method
+            fill_method = st.selectbox("Fill method for missing values:", ["Fill with Previous Value", "Fill with Next Value", "Fill with Mean", "Fill with Median", "Fill with Mode"])
+
     # Fill missing values using selected method
     if fill_method == "Fill with Previous Value":
         df.fillna(method='pad', inplace=True)
-        st.write("Filled missing values using previous value.")
+        st.write("Filled missing values using the previous value.")
     elif fill_method == "Fill with Next Value":
         df.fillna(method='bfill', inplace=True)
-        st.write("Filled missing values using next value.")
+        st.write("Filled missing values using the next value.")
     elif fill_method == "Fill with Mean":
         df.fillna(df.mean(), inplace=True)
-        st.write("Filled missing values using mean of column.")
+        st.write("Filled missing values using the mean of the column.")
     elif fill_method == "Fill with Median":
         df.fillna(df.median(), inplace=True)
-        st.write("Filled missing values using median of column.")
+        st.write("Filled missing values using the median of the column.")
     elif fill_method == "Fill with Mode":
         df.fillna(df.mode().iloc[0], inplace=True)
-        st.write("Filled missing values using mode of column.")
-    elif fill_method == "Interpolate":
-        df.interpolate(inplace=True)
-        st.write("Filled missing values using interpolation.")
+        st.write("Filled missing values using the mode of the column.")
         
     return df
 
+def export_to_excel(df, sheet_name, file_name):
+# Create a Pandas Excel writer using openpyxl as the engine
+    writer = pd.ExcelWriter(file_name, engine="openpyxl")
+# Try loading an existing workbook
+    try:
+        writer.book = openpyxl.load_workbook(file_name)
+
+        # Remove the sheet if it already exists
+        if sheet_name in writer.book.sheetnames:
+            idx = writer.book.sheetnames.index(sheet_name)
+            writer.book.remove(writer.book.worksheets[idx])
+
+        # Create a new sheet and append dataframe to it
+        df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+        # Save the workbook
+        writer.save()
+
+    # If workbook loading or sheet removal fails, create a new workbook
+    except Exception as e:
+        print(e)
+        workbook = Workbook()
+
+        # Create a new sheet and append dataframe to it
+        df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+        # Save the workbook
+        writer.save()
+        
 def add_data_summary_column(df):
     df['data_summary'] = df.apply(lambda x: ', '.join([f"{col}: {x[col]}" for col in df.columns]), axis=1)
     return df
@@ -278,12 +304,29 @@ def main():
                     st.dataframe(df, height=500)
 
         with st.sidebar.expander("Fill missing values"):
-            df_copy = df.copy()
-            df = fill_missing_values(df_copy)
-            if show_cleaned:
-                st.subheader("Cleaned Data")
-                st.dataframe(df, height=500)
+                col_to_fill = st.selectbox("Select column to check missing data:", df.columns)
+                missing_data = df[col_to_fill].isnull().sum()
+                st.write(f"Missing data in {col_to_fill} column:", missing_data)
+                fill_method = st.selectbox("Select fill method:", ["Fill with Previous Value", "Fill with Next Value", "Fill with Mean", "Fill with Median", "Fill with Mode"])
+                if fill_method == "Fill with Previous Value":
+                    df[col_to_fill].fillna(method='pad', inplace=True)
+                    st.write("Filled missing values using the previous value.")
+                elif fill_method == "Fill with Next Value":
+                    df[col_to_fill].fillna(method='bfill', inplace=True)
+                    st.write("Filled missing values using the next value.")
+                elif fill_method == "Fill with Mean":
+                    df[col_to_fill].fillna(df[col_to_fill].mean(), inplace=True)
+                    st.write("Filled missing values using the mean of the column.")
+                elif fill_method == "Fill with Median":
+                    df[col_to_fill].fillna(df[col_to_fill].median(), inplace=True)
+                    st.write("Filled missing values using the median of the column.")
+                elif fill_method == "Fill with Mode":
+                    df[col_to_fill].fillna(df[col_to_fill].mode().iloc[0], inplace=True)
+                    st.write("Filled missing values using the mode of the column.")
 
+                if show_cleaned:
+                    st.subheader("Cleaned Data")
+                    st.dataframe(df, height=500)
         # Show cleaned data
         if show_cleaned:
             st.subheader("Cleaned Data")
