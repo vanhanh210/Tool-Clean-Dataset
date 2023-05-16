@@ -91,8 +91,30 @@ def main():
         else:
             df = pd.read_excel(uploaded_file)
 
-        st.subheader("Original Data")
-        st.dataframe(df, height=500)
+        # Initialize values for showing/hiding sections
+        show_original = True
+        show_cleaned = True
+        show_history = False
+
+        # Sidebar option to hide or unhide sections
+        st.sidebar.title("Show/Hide Sections")
+        if st.sidebar.checkbox("Original Data", value=True):
+            show_original = True
+        else:
+            show_original = False
+        if st.sidebar.checkbox("Cleaned Data", value=True):
+            show_cleaned = True
+        else:
+            show_cleaned = False
+        if st.sidebar.checkbox("Version History", value=False):
+            show_history = True
+        else:
+            show_history = False
+
+        # Show original data
+        if show_original:
+            st.subheader("Original Data")
+            st.dataframe(df, height=500)
 
         # Sidebar options to inspect data and clean it
         st.sidebar.title("Data Inspection Options")
@@ -109,14 +131,18 @@ def main():
             if st.button("Replace Text"):
                 df = replace_text_in_column(df, col_to_replace, old_text, new_text)
                 st.write("Replaced text in column:", col_to_replace)
-                st.dataframe(df, height=500)
-
+                if show_cleaned:
+                    st.subheader("Cleaned Data")
+                    st.dataframe(df, height=500)
         # Sidebar options to clean data
         st.sidebar.title("Data Cleaning Options")
         with st.sidebar.expander("Remove duplicates"):
             if st.button("Remove Duplicates"):
                 df = remove_duplicates(df)
                 st.write("Removed duplicate rows.")
+                if show_cleaned:
+                    st.subheader("Cleaned Data")
+                    st.dataframe(df, height=500)
         with st.sidebar.expander("Remove outdated data"):
             date_col = st.selectbox("Select date column:", df.columns)
             filter_type = st.radio("Filter type:", options=["All", "Time period"])
@@ -127,63 +153,81 @@ def main():
                 end_time = st.time_input("Select end time:")
                 start_datetime = datetime.combine(start_date, start_time)
                 end_datetime = datetime.combine(end_date, end_time)
-                time_filter = [start_datetime, end_time]
+                time_filter = [start_datetime, end_datetime]
             else:
                 time_filter_options = ["Last 24 Hours", "Last 7 Days", "Last 30 Days"]
                 time_filter = st.selectbox("Select time filter:", options=time_filter_options)
             if st.button("Remove Outdated Data"):
                 df = remove_outdated(df, date_col, time_filter)
                 st.write("Removed outdated rows.")
+                if show_cleaned:
+                    st.subheader("Cleaned Data")
+                    st.dataframe(df, height=500)
 
         with st.sidebar.expander("Fill missing values"):
             df_copy = df.copy()
             df = fill_missing_values(df_copy)
-        
+            if show_cleaned:
+                st.subheader("Cleaned Data")
+                st.dataframe(df, height=500)
+
         # Show cleaned data
-        st.subheader("Cleaned Data")
-        st.dataframe(df, height=500)
+        if show_cleaned:
+            st.subheader("Cleaned Data")
+            st.dataframe(df, height=500)
 
         # Save the cleaned dataframe in history
         if 'cleaned_data' not in st.session_state:
             st.session_state.cleaned_data = []
-        
+            
+        current_time = datetime.now()
+        df = add_data_summary_column(df)
+        df['datetime'] = current_time
         st.session_state.cleaned_data.append(df.copy())
-        if len(st.session_state.cleaned_data) > 1:
-            
-            # Display navigation buttons to go back and forth in history
-            current_idx = len(st.session_state.cleaned_data) - 1
-            st.write(f"Showing version {current_idx+1} of {len(st.session_state.cleaned_data)}")
-            col1, col2, col3 = st.columns(3)
-            
-            if current_idx > 0:
-                if col1.button("Previous Version"):
-                    current_idx -= 1
-                    df = st.session_state.cleaned_data[current_idx]
-            
-            if current_idx < len(st.session_state.cleaned_data) - 1:
-                if col3.button("Next Version"):
-                    current_idx += 1
-                    df = st.session_state.cleaned_data[current_idx]
-           
-        
-        # Download cleaned data as file
-        file_format = uploaded_file.name.split(".")[-1]
 
-        if file_format == 'csv':
-            data = df.to_csv(index=False)
-        else:
-            wb = Workbook()
-            ws = wb.active
-            for r in dataframe_to_rows(df, index=False, header=True):
-                ws.append(r)
-            data = openpyxl.writer.excel.save_virtual_workbook(wb)
+        if len(st.session_state.cleaned_data) > 1 and show_history:
+            # Display version edit history
+            st.subheader("Version History")
+            for i, version in enumerate(st.session_state.cleaned_data[:-1]):
+                version_num = i + 1
+                st.write(f"Version {version_num} - {version['datetime'].dt.strftime('%m/%d/%Y %I:%M %p').iloc[0]}")
+                st.write(version[['data_summary']])
+                # Download button for each version
+                file_format = uploaded_file.name.split(".")[-1]
+                if file_format == 'csv':
+                    data = version.to_csv(index=False)
+                else:
+                    wb = Workbook()
+                    ws = wb.active
+                    for r in dataframe_to_rows(version, index=False, header=True):
+                        ws.append(r)
+                    data = openpyxl.writer.excel.save_virtual_workbook(wb)
 
-        b64 = base64.b64encode(data).decode()
-        href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="cleaned_data.{file_format}"><button>Download {file_format.upper()}</button></a>'
-        st.markdown(href, unsafe_allow_html=True)
-        # Clear history if user uploads a new file
-        if uploaded_file != st.session_state.get('uploaded_file', None):
-            st.session_state.uploaded_file = uploaded_file
-            st.session_state.cleaned_data = []
+                b64 = base64.b64encode(data).decode()
+                href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="cleaned_data_v{version_num}.{file_format}"><button>Download Version {version_num}</button></a>'
+                st.markdown(href, unsafe_allow_html=True)
+                
+                st.write("")
+
+            st.write(f"Current Version - {current_time.strftime('%m/%d/%Y %I:%M %p')}")
+            # Download cleaned data as file
+            file_format = uploaded_file.name.split(".")[-1]
+
+            if file_format == 'csv':
+                data = df.to_csv(index=False)
+            else:
+                wb = Workbook()
+                ws = wb.active
+                for r in dataframe_to_rows(df, index=False, header=True):
+                    ws.append(r)
+                data = openpyxl.writer.excel.save_virtual_workbook(wb)
+
+            b64 = base64.b64encode(data).decode()
+            href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="cleaned_data.{file_format}"><button>Download {file_format.upper()}</button></a>'
+            st.markdown(href, unsafe_allow_html=True)
+            # Clear history if user uploads a new file
+            if uploaded_file != st.session_state.get('uploaded_file', None):
+                st.session_state.uploaded_file = uploaded_file
+                st.session_state.cleaned_data = []
 if __name__ == "__main__":
     main()        
