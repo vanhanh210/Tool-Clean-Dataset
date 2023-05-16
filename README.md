@@ -23,8 +23,7 @@ To run this app, you will need:
 - openpyxl
 
 You can install these dependencies by running:
-<code>
-pip install -r requirements.txt </code>
+<code> pip install -r requirements.txt </code>
 
 # How to use
 Use can use on website: [cleandata.streamlit.app](https://cleandata.streamlit.app) or 
