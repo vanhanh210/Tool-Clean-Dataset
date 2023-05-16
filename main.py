@@ -125,12 +125,33 @@ def replace_text_in_column(df, col_name, old_text, new_text):
     return df
 
 def fill_missing_values(df):
-    # Ask user which method to use to fill missing values
-    fill_method = st.radio("Select a method to fill missing values:", 
-                           options=["Fill with Previous Value", "Fill with Next Value",
-                                    "Fill with Mean", "Fill with Median", "Fill with Mode",
-                                    "Interpolate"])
+    # Check if any missing values exist
+    if df.isnull().sum().sum() == 0:
+        st.write("No missing values found.")
+        return df
     
+    # Determine column data types
+    numeric_cols = []
+    non_numeric_cols = []
+    for col in df.columns:
+        if pd.api.types.is_numeric_dtype(df[col]):
+            numeric_cols.append(col)
+        else:
+            non_numeric_cols.append(col)
+    
+    # Recommend fill method based on column data types
+    if len(non_numeric_cols) == 0:
+        fill_method = "Fill with Mean"
+        st.write("All columns are numeric. Filling missing values using mean of column.")
+    else:
+        if len(numeric_cols) == 0:
+            fill_method = "Fill with Mode"
+            st.write("All columns are non-numeric. Filling missing values using mode of column.")
+        else:
+            fill_method = "Interpolate"
+            st.write("Mixture of numeric and non-numeric columns. Filling missing values using interpolation.")
+    
+    # Fill missing values using selected method
     if fill_method == "Fill with Previous Value":
         df.fillna(method='pad', inplace=True)
         st.write("Filled missing values using previous value.")
