@@ -345,8 +345,5 @@ def main():
                 st.session_state.uploaded_file = uploaded_file
                 st.session_state.cleaned_data = []
 
-    # Footer
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("Built by Vanh")
 if __name__ == "__main__":
     main()
