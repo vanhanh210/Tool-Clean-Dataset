@@ -142,19 +142,19 @@ def fill_missing_values(df):
 
     # Fill missing values using selected method
     if fill_method == "Fill with Previous Value":
-        df.fillna(method='pad', inplace=False)
+        df.fillna(method='pad')
         st.write("Filled missing values using the previous value.")
     elif fill_method == "Fill with Next Value":
-        df.fillna(method='bfill', inplace=False)
+        df.fillna(method='bfill')
         st.write("Filled missing values using the next value.")
     elif fill_method == "Fill with Mean":
-        df.fillna(df.mean(), inplace=False)
+        df.fillna(df.mean())
         st.write("Filled missing values using the mean of the column.")
     elif fill_method == "Fill with Median":
-        df.fillna(df.median(), inplace=False)
+        df.fillna(df.median()
         st.write("Filled missing values using the median of the column.")
     elif fill_method == "Fill with Mode":
-        df.fillna(df.mode().iloc[0], inplace=False)
+        df.fillna(df.mode().iloc[0])
         st.write("Filled missing values using the mode of the column.")
         
     return df
