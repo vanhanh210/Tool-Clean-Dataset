@@ -6,10 +6,11 @@ import openpyxl
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl import Workbook
 import numpy as np
+
 def remove_duplicates(df):
     return df.drop_duplicates()
 
-def recommend_data_types(df):
+def recommend_data_types(df):   
     """
     Recommends data types for each column in a pandas DataFrame based on its unique values.
     Parameters:
@@ -169,6 +170,23 @@ def fill_missing_values(df):
         
     return df
 
+
+# Function to remove outliers using z-score
+def remove_outliers_zscore(data, column, threshold):
+    z_scores = (data[column] - data[column].mean()) / data[column].std()
+    filtered_data = data[abs(z_scores) < threshold]
+    return filtered_data
+
+# Function to remove outliers using IQR method
+def remove_outliers_iqr(data, column, whisker_width):
+    q1 = data[column].quantile(0.25)
+    q3 = data[column].quantile(0.75)
+    iqr = q3 - q1
+    lower_whisker = q1 - whisker_width * iqr
+    upper_whisker = q3 + whisker_width * iqr
+    filtered_data = data[(data[column] >= lower_whisker) & (data[column] <= upper_whisker)]
+    return filtered_data
+
 def main():
     # Set Streamlit app title
     st.set_page_config(page_title="Dirty Data Cleaner", page_icon=":wrench:")
@@ -293,6 +311,16 @@ def main():
                 if show_cleaned:
                     st.subheader("Cleaned Data")
                     st.dataframe(df, height=500)
+                # Remove outliers using z-score
+        with st.sidebar.expander("Remove Outliers using Z-score"):
+            outlier_columns = st.multiselect("Select columns:", df.columns)
+            outlier_threshold = st.number_input("Select Z-score threshold:", min_value=0.0, value=3.0)
+            if st.button("Remove Outliers"):
+                df = remove_outliers_zscore(df, outlier_columns, outlier_threshold)
+                st.write("Removed outliers using Z-score")
+                if show_cleaned:
+                    st.subheader("Cleaned Data")
+                    st.dataframe(df, height=500)  
         # Show cleaned data
         if show_cleaned:
             st.subheader("Cleaned Data")
@@ -316,5 +344,9 @@ def main():
             if uploaded_file != st.session_state.get('uploaded_file', None):
                 st.session_state.uploaded_file = uploaded_file
                 st.session_state.cleaned_data = []
+
+    # Footer
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("Built by Vanh")
 if __name__ == "__main__":
     main()
