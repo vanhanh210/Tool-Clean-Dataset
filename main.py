@@ -6,6 +6,7 @@ import openpyxl
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl import Workbook
 import numpy as np
+import matplotlib.pyplot as plt
 
 def remove_duplicates(df):
     return df.drop_duplicates()
@@ -142,7 +143,7 @@ def fill_missing_values(df):
 
     # Fill missing values using selected method
     if fill_method == "Fill with Previous Value":
-        df.fillna(method='pad', inplace=True)
+        df.fillna(method='pad', inplace=False)
         st.write("Filled missing values using the previous value.")
     elif fill_method == "Fill with Next Value":
         df.fillna(method='bfill', inplace=True)
@@ -159,24 +160,7 @@ def fill_missing_values(df):
         
     return df
 
-
-# Function to remove outliers using z-score
-def remove_outliers_zscore(data, columns, threshold):
-    filtered_data = data.copy()
-    for col in columns:
-        z_scores = (data[col] - data[col].mean()) / data[col].std()
-        filtered_data = filtered_data[abs(z_scores) < threshold]
-    return filtered_data
-# Function to remove outliers using IQR method
-def remove_outliers_iqr(data, column, whisker_width):
-    q1 = data[column].quantile(0.25)
-    q3 = data[column].quantile(0.75)
-    iqr = q3 - q1
-    lower_whisker = q1 - whisker_width * iqr
-    upper_whisker = q3 + whisker_width * iqr
-    filtered_data = data[(data[column] >= lower_whisker) & (data[column] <= upper_whisker)]
-    return filtered_data
-
+    
 def main():
     # Set Streamlit app title
     st.set_page_config(page_title="Dirty Data Cleaner", page_icon=":wrench:")
@@ -211,7 +195,6 @@ def main():
         if show_original:
             st.subheader("Original Data")
             st.dataframe(df, height=500)
-
         # Sidebar options to inspect data and clean it
         with st.sidebar.expander("Recommend data types for columns"):
             recommendations = recommend_data_types(df)
@@ -282,21 +265,11 @@ def main():
             missing_data = df[col_to_fill].isnull().sum()
             st.write(f"Missing data in {col_to_fill} column:", missing_data)
             # Store the cleaned data in the temporary variable 
-            cleaned_data = fill_missing_values(df)
+            cleaned_data = fill_missing_values(df)  
             if show_cleaned:
                 st.subheader("Cleaned Data")
                 st.dataframe(cleaned_data, height=500)
-                # Remove outliers using z-score
-        with st.sidebar.expander("Remove Outliers using Z-score"):
-            outlier_columns = st.multiselect("Select columns:", df.columns)
-            outlier_threshold = st.number_input("Select Z-score threshold:", min_value=0.0, value=3.0)
-            if st.button("Remove Outliers"):
-                df = remove_outliers_zscore(df, outlier_columns, outlier_threshold)
-                cleaned_data = remove_outliers_zscore(df)
-                st.write("Removed outliers using Z-score")
-                if show_cleaned:
-                    st.subheader("Cleaned Data")
-                    st.dataframe(cleaned_data, height=500)  
+
         # Show cleaned data
         if show_cleaned:
             st.subheader("Cleaned Data")
