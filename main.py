@@ -145,16 +145,16 @@ def fill_missing_values(df):
         df.fillna(method='pad', inplace=False)
         st.write("Filled missing values using the previous value.")
     elif fill_method == "Fill with Next Value":
-        df.fillna(method='bfill', inplace=True)
+        df.fillna(method='bfill', inplace=False)
         st.write("Filled missing values using the next value.")
     elif fill_method == "Fill with Mean":
-        df.fillna(df.mean(), inplace=True)
+        df.fillna(df.mean(), inplace=False)
         st.write("Filled missing values using the mean of the column.")
     elif fill_method == "Fill with Median":
-        df.fillna(df.median(), inplace=True)
+        df.fillna(df.median(), inplace=False)
         st.write("Filled missing values using the median of the column.")
     elif fill_method == "Fill with Mode":
-        df.fillna(df.mode().iloc[0], inplace=True)
+        df.fillna(df.mode().iloc[0], inplace=False)
         st.write("Filled missing values using the mode of the column.")
         
     return df
@@ -260,9 +260,9 @@ def main():
                     st.subheader("Cleaned Data")
                     st.dataframe(cleaned_data, height=500)
         with st.sidebar.expander("Fill missing values"):
-            col_to_fill = st.selectbox("Select column to check missing data:", df.columns)
+            col_to_fill = st.selectbox("Select column to check missing data:", df.columns, key="col_to_fill")
             missing_data = df[col_to_fill].isnull().sum()
-            st.write(f"Missing data in {col_to_fill} column:", missing_data)
+            st.write(f"Missing data in {col_to_fill} column:", missing_data)  
             # Store the cleaned data in the temporary variable 
             cleaned_data = fill_missing_values(df)  
             if show_cleaned:
