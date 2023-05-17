@@ -151,7 +151,7 @@ def fill_missing_values(df):
         df.fillna(df.mean())
         st.write("Filled missing values using the mean of the column.")
     elif fill_method == "Fill with Median":
-        df.fillna(df.median()
+        df.fillna(df.median())
         st.write("Filled missing values using the median of the column.")
     elif fill_method == "Fill with Mode":
         df.fillna(df.mode().iloc[0])
