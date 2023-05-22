@@ -6,6 +6,7 @@ import openpyxl
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl import Workbook
 import numpy as np
+import tempfiles
 
 def remove_duplicates(df):
     return df.drop_duplicates()

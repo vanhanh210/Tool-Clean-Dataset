@@ -1,3 +1,4 @@
 pandas== 1.5.3
 streamlit==1.22.0
 openpyxl== 3.0.10
+temp== 2020.7.2
