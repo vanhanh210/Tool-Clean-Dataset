@@ -66,3 +66,21 @@ Note: This app has been tested with CSV and XLSX files. If you encounter any iss
 - The cleaned data is displayed, and a download link is provided for the user to download the cleaned data.
 # Execution:
 - The main() function is called at the end to run the Streamlit application.
+# How can i auto fill missing values? 
+
+The code snippet you provided defines a function called automated_data_cleaning that performs automated data cleaning operations on a given dataset. Here's an explanation of each step in the code:
+1. cleaned_data = data.copy(): This line creates a copy of the original dataset (data) to avoid modifying the original data. The cleaning operations will be performed on this copied dataset.
+2. data_types = cleaned_data.dtypes: This line retrieves the data types of each column in the cleaned_data dataset. It uses the dtypes attribute of a DataFrame to obtain the data types.
+3. numeric_cols = data_types[data_types.apply(lambda x: pd.api.types.is_numeric_dtype(x))].index: This line identifies the columns with numeric data types by applying a lambda function to each data type in the data_types series. The lambda function checks if a data type is numeric using pd.api.types.is_numeric_dtype(). The resulting boolean series is used to filter the column indices, and the .index attribute returns the column names.
+4. categorical_cols = data_types[data_types.apply(lambda x: pd.api.types.is_categorical_dtype(x))].index: This line identifies the columns with categorical data types by applying a similar lambda function. It checks if a data type is categorical using pd.api.types.is_categorical_dtype(). The resulting boolean series is used to filter the column indices, and the .index attribute returns the column names.
+5. datetime_cols = data_types[data_types.apply(lambda x: pd.api.types.is_datetime64_dtype(x))].index: This line identifies the columns with datetime data types using a lambda function. It checks if a data type is datetime using pd.api.types.is_datetime64_dtype(). The resulting boolean series is used to filter the column indices, and the .index attribute returns the column names.
+6. The code then proceeds to perform missing value imputation based on the identified column types:
+For each column (col) in the cleaned_data dataset:
+- It checks if the column has any missing values using cleaned_data[col].isnull().any().
+- If the column is numeric (col in numeric_cols), it fills the missing values with the mean value of the column if it is an integer data type, or with the median value if it is not (cleaned_data[col].fillna(cleaned_data[col].mean(), inplace=True) or cleaned_data[col].fillna(cleaned_data[col].median(), inplace=True)).
+- If the column is categorical (col in categorical_cols), it fills the missing values with the most frequent value in the column (cleaned_data[col].fillna(cleaned_data[col].mode()[0], inplace=True)).
+- If the column is a datetime column (col in datetime_cols), it fills the missing values using forward fill (cleaned_data[col].fillna(method='ffill', inplace=True)).
+- If the column does not fall into any of the above categories, it fills the missing values with the next available value in the column (cleaned_data[col] = cleaned_data[col].fillna(method='bfill')).
+7. Finally, the function returns the cleaned_data dataset, which now contains the original dataset with missing values imputed and no modifications to the original data.
+
+This function provides a simple automated approach to clean data by handling missing values based on their data types.
