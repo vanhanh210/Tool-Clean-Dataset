@@ -109,60 +109,79 @@ def replace_text_in_column(df, col_name, old_text, new_text):
     df[col_name] = df[col_name].astype(col_dtype)
     
     return df
+def automated_data_cleaning(data):
+    # Copy the original data to avoid modifying the original dataset
+    cleaned_data = data.copy()
 
-def fill_missing_values(df):
-    # Make a copy of the DataFrame
-    df = df.copy()
+    # Automatic Data Type Recognition
+    data_types = cleaned_data.dtypes
+    numeric_cols = data_types[data_types.apply(lambda x: pd.api.types.is_numeric_dtype(x))].index
+    categorical_cols = data_types[data_types.apply(lambda x: pd.api.types.is_categorical_dtype(x))].index
+    datetime_cols = data_types[data_types.apply(lambda x: pd.api.types.is_datetime64_dtype(x))].index
 
-    # Check if any missing values exist
-    if df.isnull().sum().sum() == 0:
-        st.write("No missing values found.")
-        return df
-    
-    # Determine column data types
-    numeric_cols = []
-    non_numeric_cols = []
-    for col in df.columns:
-        if pd.api.types.is_numeric_dtype(df[col]):
-            numeric_cols.append(col)
-        else:
-            non_numeric_cols.append(col)
-    
-    # Recommend fill method based on column data types
-    if len(non_numeric_cols) == 0:
-        fill_method = "Fill with Mean"
-        st.write("All columns are numeric. Filling missing values using the mean of the column.")
-    else:
-        if len(numeric_cols) == 0:
-            fill_method = "Fill with Mode"
-            st.write("All columns are non-numeric. Filling missing values using the mode of the column.")
-        else:
-            # Let the user choose the fill method
-            fill_method = st.selectbox("Fill method for missing values:", ["Fill with Previous Value", "Fill with Next Value", "Fill with Mean", "Fill with Median", "Fill with Mode"])
+    # Automatic Missing Value Imputation
+    for col in cleaned_data.columns:
+        if cleaned_data[col].isnull().any():
+            if col in numeric_cols:
+                # Fill missing values with mean or median of the column
+                if pd.api.types.is_integer_dtype(cleaned_data[col]):
+                    cleaned_data[col].fillna(cleaned_data[col].mean(), inplace=True)
+                else:
+                    cleaned_data[col].fillna(cleaned_data[col].median(), inplace=True)
+            elif col in categorical_cols:
+                # Fill missing values with most frequent value in the column
+                cleaned_data[col].fillna(cleaned_data[col].mode()[0], inplace=True)
+            elif col in datetime_cols:
+                # Fill missing values with forward fill
+                cleaned_data[col].fillna(method='ffill', inplace=True)
+            else:
+                # Fill missing values with next available value in the column
+                cleaned_data[col] = cleaned_data[col].fillna(method='bfill')
 
-    # Fill missing values using selected method
-    if fill_method == "Fill with Previous Value":
-        df.fillna(method='pad', inplace=False)
-        st.write("Filled missing values using the previous value.")
-    elif fill_method == "Fill with Next Value":
-        df.fillna(method='bfill', inplace=True)
-        st.write("Filled missing values using the next value.")
-    elif fill_method == "Fill with Mean":
-        df.fillna(df.mean(), inplace=True)
-        st.write("Filled missing values using the mean of the column.")
-    elif fill_method == "Fill with Median":
-        df.fillna(df.median(), inplace=True)
-        st.write("Filled missing values using the median of the column.")
-    elif fill_method == "Fill with Mode":
-        df.fillna(df.mode().iloc[0], inplace=True)
-        st.write("Filled missing values using the mode of the column.")
-        
-    return df
-
+    return cleaned_data
     
 def main():
     # Set Streamlit app title
     st.set_page_config(page_title="Dirty Data Cleaner", page_icon=":wrench:")
+     # Instructions
+    st.title("Dirty Data Cleaner")
+    st.write("Welcome to the Dirty Data Cleaner web app!")
+    st.write("This app allows you to clean and preprocess your data easily. Please follow the instructions below to get started:")
+
+    # Step 1: Upload & Inspect Data
+    st.subheader("Step 1: Upload & Inspect Data")
+    st.write("Upload your CSV or XLSX file using the file uploader on the left sidebar.")
+    st.write("Once uploaded, you can view the original data and apply various data cleaning operations.")
+
+    # Step 2: Data Type Recommendations
+    st.subheader("Step 2: Data Type Recommendations")
+    st.write("In this step, the app recommends data types for each column in your dataset based on the unique values present.")
+    st.write("You can view the recommended data types and apply them to the columns.")
+
+    # Step 3: Change Data Types
+    st.subheader("Step 3: Change Data Types")
+    st.write("If you want to manually change the data types of specific columns, you can do so in this step.")
+    st.write("Select the columns and their corresponding data types, and apply the changes.")
+
+    # Step 4: Replace Text in Columns
+    st.subheader("Step 4: Replace Text in Columns")
+    st.write("If you need to replace specific text in a column, you can do that in this step.")
+    st.write("Select the column, enter the text to replace, and the replacement text.")
+
+    # Step 5: Remove Duplicates
+    st.subheader("Step 5: Remove Duplicates")
+    st.write("If your dataset contains duplicate rows, you can remove them in this step.")
+
+    # Step 6: Remove Outdated Data
+    st.subheader("Step 6: Remove Outdated Data")
+    st.write("If your dataset has a date column and you want to remove rows based on a specific time range, you can do that here.")
+    st.write("Select the date column and set the start and end dates/times.")
+
+    # Step 7: Fill Missing Values
+    st.subheader("Step 7: Fill Missing Values")
+    st.write("If your dataset has missing values, you can fill them using various methods in this step.")
+    st.write("Select the column to check missing data and choose the fill method.")
+
     # Define a variable to store the cleaned data
     cleaned_data = None
     # Upload file and display original data
@@ -259,13 +278,10 @@ def main():
                 if show_cleaned:
                     st.subheader("Cleaned Data")
                     st.dataframe(cleaned_data, height=500)
-        with st.sidebar.expander("Fill missing values"):
-            col_to_fill = st.selectbox("Select column to check missing data:", df.columns)
-            missing_data = df[col_to_fill].isnull().sum()
-            st.write(f"Missing data in {col_to_fill} column:", missing_data)
-            # Store the cleaned data in the temporary variable 
-            cleaned_data = fill_missing_values(df)  
-            if show_cleaned:
+        with st.sidebar.expander("Auto fill missing values"):
+            if st.button("Auto fill missing values"):
+                df = automated_data_cleaning(df)
+                cleaned_data = df
                 st.subheader("Cleaned Data")
                 st.dataframe(cleaned_data, height=500)
 
