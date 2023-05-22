@@ -197,7 +197,6 @@ def main():
         show_original = True
         show_cleaned = True
 
-
         # Sidebar option to hide or unhide sections
         st.sidebar.title("Show/Hide Sections")
         if st.sidebar.checkbox("Original Data", value=True, key="show_original"):
@@ -284,30 +283,30 @@ def main():
                 cleaned_data = df
                 st.subheader("Cleaned Data")
                 st.dataframe(cleaned_data, height=500)
-
-        # Show cleaned data
+    # Show cleaned data
         if show_cleaned:
             st.subheader("Cleaned Data")
             st.dataframe(cleaned_data, height=500)
+            
             # Download cleaned data as file
             file_format = uploaded_file.name.split(".")[-1]
 
             if file_format == 'csv':
                 data = cleaned_data.to_csv(index=False)
             else:
-                wb = Workbook()
-                ws = wb.active
-                for r in dataframe_to_rows(cleaned_data, index=False, header=True):
-                    ws.append(r)
-                data = openpyxl.writer.excel.save_virtual_workbook(wb)
+                with tempfile.NamedTemporaryFile(delete=False) as temp:
+                    cleaned_data.to_excel(temp.name, index=False, engine="openpyxl")
+                    data = open(temp.name, 'rb').read()
 
             b64 = base64.b64encode(data).decode()
-            href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="cleaned_data.{file_format}"><button>Download {file_format.upper()}</button></a>'
+            href = f'<a href="data:application/octet-stream;base64,{b64}" download="cleaned_data.{file_format}"><button>Download {file_format.upper()}</button></a>'
             st.markdown(href, unsafe_allow_html=True)
+            
             # Clear history if user uploads a new file
             if uploaded_file != st.session_state.get('uploaded_file', None):
                 st.session_state.uploaded_file = uploaded_file
                 st.session_state.cleaned_data = []
+
 
 if __name__ == "__main__":
     main()
